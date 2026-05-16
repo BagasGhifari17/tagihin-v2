@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "666968649668",
+    "project_id": "tagih-in-v2",
+    "storage_bucket": "tagih-in-v2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:666968649668:android:727117febfadc327147e91",
+        "android_client_info": {
+          "package_name": "com.example.tagihin_v2"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDCPnCvQ6crZQFJUYK_CnzDsRsu5Afplk8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

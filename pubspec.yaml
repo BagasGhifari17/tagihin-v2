@@ -1,0 +1,39 @@
+name: tagih_in
+description: "Ingat Tagihan, Tenang Kehidupan"
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.6
+  
+  # State Management
+  flutter_riverpod: ^2.6.1
+  riverpod_annotation: ^2.6.1
+
+  # Firebase
+  firebase_core: ^3.1.0
+  cloud_firestore: ^5.0.1
+  firebase_auth: ^5.1.1
+
+  # Utils
+  intl: ^0.19.0
+  uuid: ^4.4.0
+  flutter_local_notifications: ^17.1.2
+  google_fonts: ^6.2.1
+  flutter_native_splash: ^2.4.7
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  build_runner: ^2.5.4
+  riverpod_generator: ^2.6.5
+  flutter_lints: ^3.0.0
+  custom_lint: ^0.7.6
+  riverpod_lint: ^2.6.5
+
+flutter:
+  uses-material-design: true
