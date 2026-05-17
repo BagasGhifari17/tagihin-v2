@@ -32,7 +32,7 @@ class _MainNavigationState extends State<MainNavigation> {
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showActionSelectionSheet(context),
         shape: const CircleBorder(),
-        backgroundColor: Colors.black87,
+        backgroundColor: Colors.blue.shade600,
         elevation: 4,
         child: const Icon(Icons.add_rounded, color: Colors.white, size: 32),
       ),

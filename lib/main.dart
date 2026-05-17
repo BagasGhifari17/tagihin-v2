@@ -76,22 +76,18 @@ class TagihInApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // 1. Pantau status otentikasi secara real-time di level tertinggi
-    final authStatus = ref.watch(authStatusProvider);
+    // Tetap pancing listener auth di level tertinggi sejak awal booting aplikasi
+    ref.watch(authStatusProvider);
 
     return MaterialApp(
       title: 'Tagih.In',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
 
-      // 2. KONTROL GERBANG OTOMATIS: Layar otomatis berubah secara reaktif tanpa perlu Navigator manual
-      home: authStatus == AuthStatus.unknown
-          ? const DartSplashScreen() // Jika masih loading boot, tahan di Splash Screen
-          : authStatus == AuthStatus.authenticated
-              ? const MainNavigation() // Jika sukses login, otomatis ganti ke Home
-              : const LoginScreen(), // Jika logout/belum login, otomatis ganti ke Login
+      // FIX SAKTI: Selalu render Splash Screen duluan di gerbang utama tanpa interupsi kondisi auth reaktif
+      home: const DartSplashScreen(),
 
-      // Tetap daftarkan rute pendukung untuk keperluan navigasi manual (seperti ke halaman register)
+      // Peta navigasi penuh untuk mendukung perpindahan rute dari Splash Screen lo
       routes: {
         '/splash': (context) => const DartSplashScreen(),
         '/login': (context) => const LoginScreen(),

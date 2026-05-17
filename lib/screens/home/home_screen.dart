@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/bill_provider.dart';
 import 'package:intl/intl.dart';
 import '../../models/bill_model.dart';
+import '../../widgets/sheets/bill_sheet.dart'; // <-- MEMASTIKAN SHEET TERIMPOR SEMPURNA
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -11,7 +12,7 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     // ------------------------------------------------------------------------
-    // AMANKAN STRATEGI DATA STREAM & LOCK ENGINE (Bebas Looping Setan)
+    // DATA STREAM & LOCK ENGINE (Aman dari Looping Setan)
     // ------------------------------------------------------------------------
     final billsAsync = ref.watch(billStreamProvider);
     final transactionsAsync = ref.watch(transactionStreamProvider);
@@ -22,7 +23,6 @@ class HomeScreen extends ConsumerWidget {
     // KUNCI PENGAMAN LOOP: Picu engine secara aman hanya saat frame UI selesai dimuat
     if (billsAsync.value != null && billsAsync.value!.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        // Mengonversi tipe internal list secara aman ke objek model tujuan
         final activeBills = billsAsync.value!.cast<BillModel>();
         ref
             .read(recurringEngineProvider)
@@ -30,7 +30,7 @@ class HomeScreen extends ConsumerWidget {
       });
     }
 
-    // LOGIKA EMOTIONAL MICROCOPY (Poin 4 & 9)
+    // LOGIKA EMOTIONAL MICROCOPY (Financial Insight)
     String emotionalInsight = "Kondisi finansialmu terpantau aman 👍";
     IconData insightIcon = Icons.check_circle_outline_rounded;
 
@@ -53,17 +53,19 @@ class HomeScreen extends ConsumerWidget {
       body: CustomScrollView(
         physics: const BouncingScrollPhysics(),
         slivers: [
-          // APP BAR
+          // APP BAR PREMIUM
           const SliverAppBar(
             floating: true,
+            pinned: false,
             backgroundColor: Color(0xFFF8F9FB),
             elevation: 0,
             title: Text(
               "Tagih.In",
               style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
-                  fontSize: 22),
+                  fontWeight: FontWeight.w900,
+                  color: Color(0xFF1E3A8A),
+                  letterSpacing: -0.5,
+                  fontSize: 24),
             ),
           ),
 
@@ -143,7 +145,7 @@ class HomeScreen extends ConsumerWidget {
             ),
           ),
 
-          // 2. SECTION: TAGIHAN MENDATANG
+          // 2. SECTION: KEWAJIBAN AKTIF
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.only(
@@ -216,89 +218,185 @@ class HomeScreen extends ConsumerWidget {
                       recurrenceLabel = "Tahunan";
                     }
 
-                    return Container(
-                      margin: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: cardBorderColor, width: 1.5),
-                        boxShadow: [
-                          BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.01),
-                              blurRadius: 10,
-                              offset: const Offset(0, 2))
-                        ],
-                      ),
-                      child: ListTile(
-                        leading: Transform.scale(
-                          scale: 1.1,
-                          child: Checkbox(
-                            value: bill.isPaid,
-                            activeColor: Colors.green,
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(6)),
-                            onChanged: (val) {
-                              HapticFeedback.mediumImpact();
-                              ref
-                                  .read(firestoreServiceProvider)
-                                  .toggleBillStatus(bill.id, bill.isPaid);
-                            },
+                    // FIX UTAMA: Struktur Interaksi Detektor CRUD (GestureDetector -> Dismissible -> Card)
+                    return GestureDetector(
+                      onLongPress: () {
+                        HapticFeedback
+                            .heavyImpact(); // Efek getar mantap saat ditahan lama
+                        showModalBottomSheet(
+                          context: context,
+                          isScrollControlled: true,
+                          backgroundColor: Colors.transparent,
+                          builder: (context) => BillSheet(billToEdit: bill),
+                        );
+                      },
+                      child: Dismissible(
+                        key: Key(bill
+                            .id), // ID Unik Firestore untuk pengaman sinkronisasi state
+                        direction: DismissDirection
+                            .endToStart, // Geser dari kanan ke kiri untuk hapus
+                        background: Container(
+                          margin: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 5),
+                          padding: const EdgeInsets.only(right: 20),
+                          decoration: BoxDecoration(
+                            color: Colors.red.withValues(alpha: 0.9),
+                            borderRadius: BorderRadius.circular(16),
                           ),
-                        ),
-                        title: Row(
-                          children: [
-                            Expanded(
-                              child: Text(bill.title,
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 15,
-                                      color: Colors.black87)),
-                            ),
-                            if (isRecurring)
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 3),
-                                decoration: BoxDecoration(
-                                    color: Colors.blue.shade50,
-                                    borderRadius: BorderRadius.circular(8)),
-                                child: Text(
-                                  recurrenceLabel,
-                                  style: TextStyle(
-                                      color: Colors.blue.shade800,
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold),
-                                ),
-                              ),
-                          ],
-                        ),
-                        subtitle: Padding(
-                          padding: const EdgeInsets.only(top: 4.0),
-                          child: Row(
+                          alignment: Alignment.centerRight,
+                          child: const Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
                             children: [
-                              Icon(Icons.access_time_filled_rounded,
-                                  size: 12,
-                                  color: urgencyColor.withValues(alpha: 0.7)),
-                              const SizedBox(width: 4),
-                              Text(urgencyText,
-                                  style: TextStyle(
-                                      color: urgencyColor,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600)),
                               Text(
-                                  " • ${DateFormat('dd MMM').format(bill.dueDate)}",
-                                  style: TextStyle(
-                                      color: Colors.grey.shade400,
-                                      fontSize: 12)),
+                                "Hapus Tagihan ",
+                                style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14),
+                              ),
+                              Icon(Icons.delete_sweep_rounded,
+                                  color: Colors.white, size: 24),
                             ],
                           ),
                         ),
-                        trailing: Text(
-                          "Rp ${NumberFormat('#,###', 'id_ID').format(bill.amount)}",
-                          style: const TextStyle(
-                              color: Colors.black87,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 15),
+                        confirmDismiss: (direction) async {
+                          return await showDialog(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(20)),
+                              title: const Text("Hapus Tagihan?"),
+                              content: Text(
+                                  "Apakah kamu yakin mau menghapus tagihan '${bill.title}'?"),
+                              actions: [
+                                TextButton(
+                                  onPressed: () =>
+                                      Navigator.of(context).pop(false),
+                                  child: const Text("Batal",
+                                      style: TextStyle(color: Colors.grey)),
+                                ),
+                                TextButton(
+                                  onPressed: () =>
+                                      Navigator.of(context).pop(true),
+                                  child: const Text("Hapus",
+                                      style: TextStyle(
+                                          color: Colors.red,
+                                          fontWeight: FontWeight.bold)),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                        onDismissed: (direction) async {
+                          try {
+                            await ref
+                                .read(firestoreServiceProvider)
+                                .deleteBill(bill.id);
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                    content: Text(
+                                        "Tagihan '${bill.title}' berhasil dihapus.")),
+                              );
+                            }
+                          } catch (e) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                    content: Text(
+                                        "Gagal menghapus: ${e.toString()}"),
+                                    backgroundColor: Colors.red),
+                              );
+                            }
+                          }
+                        },
+                        child: Container(
+                          margin: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            border:
+                                Border.all(color: cardBorderColor, width: 1.5),
+                            boxShadow: [
+                              BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.02),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 2))
+                            ],
+                          ),
+                          child: ListTile(
+                            leading: Transform.scale(
+                              scale: 1.1,
+                              child: Checkbox(
+                                value: bill.isPaid,
+                                activeColor: Colors.green,
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(6)),
+                                onChanged: (val) {
+                                  HapticFeedback.mediumImpact();
+                                  ref
+                                      .read(firestoreServiceProvider)
+                                      .toggleBillStatus(bill.id, bill.isPaid);
+                                },
+                              ),
+                            ),
+                            title: Row(
+                              children: [
+                                Expanded(
+                                  child: Text(bill.title,
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 15,
+                                          color: Colors.black87)),
+                                ),
+                                if (isRecurring)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 3),
+                                    decoration: BoxDecoration(
+                                        color: Colors.blue.shade50,
+                                        borderRadius: BorderRadius.circular(8)),
+                                    child: Text(
+                                      recurrenceLabel,
+                                      style: TextStyle(
+                                          color: Colors.blue.shade800,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            subtitle: Padding(
+                              padding: const EdgeInsets.only(top: 4.0),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.access_time_filled_rounded,
+                                      size: 12,
+                                      color:
+                                          urgencyColor.withValues(alpha: 0.7)),
+                                  const SizedBox(width: 4),
+                                  Text(urgencyText,
+                                      style: TextStyle(
+                                          color: urgencyColor,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600)),
+                                  Text(
+                                      " • ${DateFormat('dd MMM').format(bill.dueDate)}",
+                                      style: TextStyle(
+                                          color: Colors.grey.shade400,
+                                          fontSize: 12)),
+                                ],
+                              ),
+                            ),
+                            trailing: Text(
+                              "Rp ${NumberFormat('#,###', 'id_ID').format(bill.amount)}",
+                              style: const TextStyle(
+                                  color: Colors.black87,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 15),
+                            ),
+                          ),
                         ),
                       ),
                     );
@@ -436,11 +534,11 @@ class HomeScreen extends ConsumerWidget {
   Widget _buildEmptyState(String title, String subtitle) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.only(top: 24, bottom: 24, left: 24, right: 24),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.grey.shade100),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
       ),
       child: Column(
         children: [
@@ -449,9 +547,9 @@ class HomeScreen extends ConsumerWidget {
                   fontWeight: FontWeight.bold,
                   fontSize: 14,
                   color: Colors.black87)),
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
           Text(subtitle,
-              style: TextStyle(color: Colors.grey.shade50, fontSize: 12),
+              style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
               textAlign: TextAlign.center),
         ],
       ),

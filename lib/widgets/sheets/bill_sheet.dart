@@ -6,7 +6,9 @@ import '../../providers/bill_provider.dart';
 import 'package:intl/intl.dart';
 
 class BillSheet extends ConsumerStatefulWidget {
-  const BillSheet({super.key});
+  final BillModel? billToEdit; // <-- PENERIMA DATA MODE EDIT
+
+  const BillSheet({super.key, this.billToEdit});
 
   @override
   ConsumerState<BillSheet> createState() => _BillSheetState();
@@ -18,9 +20,24 @@ class _BillSheetState extends ConsumerState<BillSheet> {
   final _amountController = TextEditingController();
   DateTime _selectedDate = DateTime.now();
 
-  // State baru penampung periodik (Jaminan Aman dari Kode Merah)
-  String _selectedRecurrence = 'none'; // 'none', 'weekly', 'monthly', 'yearly'
+  String _selectedRecurrence = 'none';
   double _inputAmount = 0;
+
+  bool get _isEditMode => widget.billToEdit != null; // Cek status mode layar
+
+  @override
+  void initState() {
+    super.initState();
+    // Jika dalam mode edit, langsung suntik data lama ke dalam state form input
+    if (_isEditMode) {
+      final bill = widget.billToEdit!;
+      _titleController.text = bill.title;
+      _amountController.text = bill.amount.toInt().toString();
+      _selectedDate = bill.dueDate;
+      _selectedRecurrence = bill.recurrence;
+      _inputAmount = bill.amount;
+    }
+  }
 
   @override
   void dispose() {
@@ -31,13 +48,18 @@ class _BillSheetState extends ConsumerState<BillSheet> {
 
   @override
   Widget build(BuildContext context) {
-    // Ambil data balance realtime terpusat untuk kalkulator Live Preview Impact
     final netBalance = ref.watch(netBalanceProvider);
     final safeToSpend = ref.watch(safeToSpendProvider);
 
-    // Hitung dampak penambahan tagihan terhadap Safe-to-Spend
-    final projectedBebanTagihan = (netBalance - safeToSpend) + _inputAmount;
-    final projectedSafeToSpend = safeToSpend - _inputAmount;
+    // Kalkulasi proyeksi live preview
+    double baseBeban = netBalance - safeToSpend;
+    if (_isEditMode) {
+      baseBeban -= widget
+          .billToEdit!.amount; // Kurangi beban lama dulu jika dalam mode edit
+    }
+
+    final projectedBebanTagihan = baseBeban + _inputAmount;
+    final projectedSafeToSpend = netBalance - projectedBebanTagihan;
 
     return Container(
       padding: EdgeInsets.only(
@@ -58,7 +80,6 @@ class _BillSheetState extends ConsumerState<BillSheet> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Handle bar atas minimalis ala iOS
               Center(
                 child: Container(
                   width: 40,
@@ -70,16 +91,14 @@ class _BillSheetState extends ConsumerState<BillSheet> {
                 ),
               ),
               const SizedBox(height: 20),
-              const Text(
-                "Tambah Tagihan Baru",
-                style: TextStyle(
+              Text(
+                _isEditMode ? "Ubah Data Tagihan" : "Tambah Tagihan Baru",
+                style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                     color: Colors.black87),
               ),
               const SizedBox(height: 24),
-
-              // 1. NOMINAL INPUT (Fokus Utama - Nominal-First UX)
               const Text(
                 "NOMINAL TAGIHAN",
                 style: TextStyle(
@@ -112,8 +131,6 @@ class _BillSheetState extends ConsumerState<BillSheet> {
               ),
               Divider(color: Colors.grey.shade200, height: 1),
               const SizedBox(height: 20),
-
-              // 2. INPUT NAMA TAGIHAN
               TextFormField(
                 controller: _titleController,
                 textCapitalization: TextCapitalization.sentences,
@@ -141,8 +158,6 @@ class _BillSheetState extends ConsumerState<BillSheet> {
                     : null,
               ),
               const SizedBox(height: 12),
-
-              // 3. DATE PICKER JATUH TEMPO PREMIUM
               Theme(
                 data: Theme.of(context).copyWith(
                   listTileTheme: const ListTileThemeData(horizontalTitleGap: 8),
@@ -168,7 +183,9 @@ class _BillSheetState extends ConsumerState<BillSheet> {
                     final date = await showDatePicker(
                       context: context,
                       initialDate: _selectedDate,
-                      firstDate: DateTime.now(),
+                      firstDate: _isEditMode
+                          ? _selectedDate.subtract(const Duration(days: 365))
+                          : DateTime.now(),
                       lastDate: DateTime(2030),
                     );
                     if (date != null) {
@@ -178,8 +195,6 @@ class _BillSheetState extends ConsumerState<BillSheet> {
                 ),
               ),
               const SizedBox(height: 16),
-
-              // 4. CHOICECHIPS PERIODIK (Sistem Tagihan Berulang)
               const Text(
                 "SISTEM TAGIHAN BERULANG",
                 style: TextStyle(
@@ -203,8 +218,6 @@ class _BillSheetState extends ConsumerState<BillSheet> {
                 ),
               ),
               const SizedBox(height: 24),
-
-              // 5. LIVE IMPACT CARD (Financial Awareness)
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -229,7 +242,7 @@ class _BillSheetState extends ConsumerState<BillSheet> {
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
-                            "Proyeksi Finansial Setelah Ditambahkan:",
+                            "Proyeksi Finansial Setelah Penyesuaian:",
                             style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.bold,
@@ -242,15 +255,14 @@ class _BillSheetState extends ConsumerState<BillSheet> {
                     ),
                     const SizedBox(height: 10),
                     _buildImpactRow(
-                        "Beban Tagihan Baru", projectedBebanTagihan),
+                        "Beban Tagihan Proyeksi", projectedBebanTagihan),
                     const SizedBox(height: 4),
-                    _buildImpactRow("Sisa Safe-to-Spend", projectedSafeToSpend),
+                    _buildImpactRow(
+                        "Sisa Safe-to-Spend Proyeksi", projectedSafeToSpend),
                   ],
                 ),
               ),
               const SizedBox(height: 24),
-
-              // 6. TOMBOL SIMPAN (Instant Dismiss & Fire-and-Forget)
               SizedBox(
                 width: double.infinity,
                 height: 54,
@@ -262,37 +274,52 @@ class _BillSheetState extends ConsumerState<BillSheet> {
                         borderRadius: BorderRadius.circular(16)),
                     elevation: 0,
                   ),
-                  onPressed: () {
+                  onPressed: () async {
                     if (_formKey.currentState!.validate()) {
                       final navigator = Navigator.of(context);
                       final scaffoldMessenger = ScaffoldMessenger.of(context);
 
-                      // Amblas instan tanpa nunggu network async gap
-                      navigator.pop();
+                      navigator.pop(); // Tutup sheet instan demi kelancaran UX
 
-                      // Susun model dengan field recurrence yang aman terintegrasi
-                      final newBill = BillModel(
-                        id: '',
+                      final targetBill = BillModel(
+                        id: _isEditMode ? widget.billToEdit!.id : '',
                         title: _titleController.text.trim(),
                         amount: _inputAmount,
                         dueDate: _selectedDate,
-                        isPaid: false,
+                        isPaid: _isEditMode ? widget.billToEdit!.isPaid : false,
                         recurrence: _selectedRecurrence,
                       );
 
-                      ref.read(firestoreServiceProvider).addBill(newBill);
-
-                      scaffoldMessenger.showSnackBar(
-                        const SnackBar(
-                          content: Text("Tagihan baru berhasil disimpan!"),
-                          backgroundColor: Colors.green,
-                        ),
-                      );
+                      if (_isEditMode) {
+                        // Jalankan mode Update data lama
+                        await ref
+                            .read(firestoreServiceProvider)
+                            .updateBill(widget.billToEdit!.id, targetBill);
+                        scaffoldMessenger.showSnackBar(
+                          const SnackBar(
+                            content:
+                                Text("Perubahan tagihan berhasil diperbarui!"),
+                            backgroundColor: Colors.blue,
+                          ),
+                        );
+                      } else {
+                        // Jalankan mode Tambah data baru
+                        await ref
+                            .read(firestoreServiceProvider)
+                            .addBill(targetBill);
+                        scaffoldMessenger.showSnackBar(
+                          const SnackBar(
+                            content: Text("Tagihan baru berhasil disimpan!"),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                      }
                     }
                   },
-                  child: const Text("Simpan Tagihan",
-                      style:
-                          TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                  child: Text(
+                      _isEditMode ? "Perbarui Tagihan" : "Simpan Tagihan",
+                      style: const TextStyle(
+                          fontSize: 15, fontWeight: FontWeight.bold)),
                 ),
               ),
             ],
