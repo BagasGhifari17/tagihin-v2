@@ -23,6 +23,7 @@ dependencies:
   intl: ^0.19.0
   uuid: ^4.4.0
   flutter_local_notifications: ^17.1.2
+  timezone: ^0.9.4 # <--- FIX UTAMA: Paspor resmi timezone bumi disisipkan aman
   google_fonts: ^6.2.1
   flutter_native_splash: ^2.4.7
 

@@ -4,7 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/bill_provider.dart';
 import 'package:intl/intl.dart';
 import '../../models/bill_model.dart';
-import '../../widgets/sheets/bill_sheet.dart'; // <-- MEMASTIKAN SHEET TERIMPOR SEMPURNA
+import '../../widgets/sheets/bill_sheet.dart';
+import '../../providers/notification_service.dart'; // FIX: Impor provider pengingat lo
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -24,9 +25,19 @@ class HomeScreen extends ConsumerWidget {
     if (billsAsync.value != null && billsAsync.value!.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         final activeBills = billsAsync.value!.cast<BillModel>();
+
+        // A. Jalankan engine pengecekan tagihan berulang bawaan lo
         ref
             .read(recurringEngineProvider)
             .checkAndGenerateRecurringBills(activeBills);
+
+        // B. SUNTIKAN SAKTI V2: Daftarkan booking alarm H-1 subuh otomatis (Anti-Gagal v1)
+        final notifService = ref.read(notificationServiceProvider);
+        for (var bill in activeBills) {
+          if (!bill.isPaid) {
+            notifService.scheduleBillReminder(bill);
+          }
+        }
       });
     }
 
@@ -59,6 +70,7 @@ class HomeScreen extends ConsumerWidget {
             pinned: false,
             backgroundColor: Color(0xFFF8F9FB),
             elevation: 0,
+            scrolledUnderElevation: 0,
             title: Text(
               "Tagih.In",
               style: TextStyle(
@@ -218,11 +230,208 @@ class HomeScreen extends ConsumerWidget {
                       recurrenceLabel = "Tahunan";
                     }
 
-                    // FIX UTAMA: Struktur Interaksi Detektor CRUD (GestureDetector -> Dismissible -> Card)
                     return GestureDetector(
+                      onTap: () {
+                        HapticFeedback.lightImpact();
+                        showModalBottomSheet(
+                          context: context,
+                          isScrollControlled: true,
+                          backgroundColor: Colors.transparent,
+                          builder: (context) => Container(
+                            padding: EdgeInsets.only(
+                              bottom:
+                                  MediaQuery.of(context).viewInsets.bottom + 32,
+                              left: 24,
+                              right: 24,
+                              top: 24,
+                            ),
+                            decoration: const BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.vertical(
+                                  top: Radius.circular(28)),
+                            ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Center(
+                                  child: Container(
+                                    width: 36,
+                                    height: 4,
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey.shade300,
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 24),
+                                const Text(
+                                  "Konfirmasi Pelunasan",
+                                  style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black87),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  "Pastikan kamu sudah melunasi tagihan ini melalui rekening bank atau dompet digitalmu.",
+                                  style: TextStyle(
+                                      fontSize: 13,
+                                      color: Colors.grey.shade500,
+                                      height: 1.4),
+                                ),
+                                const SizedBox(height: 24),
+                                Container(
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF8F9FB),
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                        color: const Color(0xFFE5E7EB)),
+                                  ),
+                                  child: Column(
+                                    children: [
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text("Nama Tagihan",
+                                              style: TextStyle(
+                                                  fontSize: 13,
+                                                  color: Colors.grey.shade600,
+                                                  fontWeight: FontWeight.w500)),
+                                          Text(bill.title,
+                                              style: const TextStyle(
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Colors.black87)),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 12),
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text("Total Nominal",
+                                              style: TextStyle(
+                                                  fontSize: 13,
+                                                  color: Colors.grey.shade600,
+                                                  fontWeight: FontWeight.w500)),
+                                          Text(
+                                            "Rp ${NumberFormat('#,###', 'id_ID').format(bill.amount)}",
+                                            style: const TextStyle(
+                                                fontSize: 15,
+                                                fontWeight: FontWeight.w900,
+                                                color: Colors.black),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 20),
+                                Container(
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: Colors.orange.shade50
+                                        .withValues(alpha: 0.4),
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.info_outline_rounded,
+                                          color: Colors.orange.shade900,
+                                          size: 18),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Text(
+                                          "Safe-to-Spend tetap terjaga lunas sebesar Rp ${NumberFormat('#,###', 'id_ID').format(bill.amount)} dari pos alokasi terikat.",
+                                          style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.orange.shade900,
+                                              fontWeight: FontWeight.w500,
+                                              height: 1.4),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 28),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: SizedBox(
+                                        height: 52,
+                                        child: TextButton(
+                                          style: TextButton.styleFrom(
+                                              shape: RoundedRectangleBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                          14))),
+                                          onPressed: () =>
+                                              Navigator.pop(context),
+                                          child: Text("Batal",
+                                              style: TextStyle(
+                                                  color: Colors.grey.shade600,
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 14)),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: SizedBox(
+                                        height: 52,
+                                        child: ElevatedButton(
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor:
+                                                Colors.blue.shade700,
+                                            foregroundColor: Colors.white,
+                                            elevation: 0,
+                                            shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(14)),
+                                          ),
+                                          onPressed: () {
+                                            HapticFeedback.heavyImpact();
+                                            Navigator.pop(context);
+                                            ref
+                                                .read(firestoreServiceProvider)
+                                                .toggleBillStatus(
+                                                    bill.id, bill.isPaid);
+
+                                            // FIX: Batalkan pemicu alarm di memori HP secara real-time pas tagihan diset lunas
+                                            ref
+                                                .read(
+                                                    notificationServiceProvider)
+                                                .cancelNotification(bill.id);
+
+                                            ScaffoldMessenger.of(context)
+                                                .showSnackBar(
+                                              SnackBar(
+                                                content: Text(
+                                                    "Kewajiban '${bill.title}' selesai dilunasi! 🎉"),
+                                                backgroundColor:
+                                                    Colors.green.shade700,
+                                              ),
+                                            );
+                                          },
+                                          child: const Text("Konfirmasi Bayar",
+                                              style: TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 14)),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
                       onLongPress: () {
-                        HapticFeedback
-                            .heavyImpact(); // Efek getar mantap saat ditahan lama
+                        HapticFeedback.heavyImpact();
                         showModalBottomSheet(
                           context: context,
                           isScrollControlled: true,
@@ -231,10 +440,8 @@ class HomeScreen extends ConsumerWidget {
                         );
                       },
                       child: Dismissible(
-                        key: Key(bill
-                            .id), // ID Unik Firestore untuk pengaman sinkronisasi state
-                        direction: DismissDirection
-                            .endToStart, // Geser dari kanan ke kiri untuk hapus
+                        key: Key(bill.id),
+                        direction: DismissDirection.endToStart,
                         background: Container(
                           margin: const EdgeInsets.symmetric(
                               horizontal: 16, vertical: 5),
@@ -247,13 +454,11 @@ class HomeScreen extends ConsumerWidget {
                           child: const Row(
                             mainAxisAlignment: MainAxisAlignment.end,
                             children: [
-                              Text(
-                                "Hapus Tagihan ",
-                                style: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14),
-                              ),
+                              Text("Hapus Tagihan ",
+                                  style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14)),
                               Icon(Icons.delete_sweep_rounded,
                                   color: Colors.white, size: 24),
                             ],
@@ -292,6 +497,12 @@ class HomeScreen extends ConsumerWidget {
                             await ref
                                 .read(firestoreServiceProvider)
                                 .deleteBill(bill.id);
+
+                            // FIX: Batalkan booking alarm jika dokumen tagihan dihapus permanent
+                            ref
+                                .read(notificationServiceProvider)
+                                .cancelNotification(bill.id);
+
                             if (context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
@@ -326,21 +537,8 @@ class HomeScreen extends ConsumerWidget {
                             ],
                           ),
                           child: ListTile(
-                            leading: Transform.scale(
-                              scale: 1.1,
-                              child: Checkbox(
-                                value: bill.isPaid,
-                                activeColor: Colors.green,
-                                shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(6)),
-                                onChanged: (val) {
-                                  HapticFeedback.mediumImpact();
-                                  ref
-                                      .read(firestoreServiceProvider)
-                                      .toggleBillStatus(bill.id, bill.isPaid);
-                                },
-                              ),
-                            ),
+                            leading: const Icon(Icons.receipt_long_rounded,
+                                color: Color(0xFF2563EB), size: 22),
                             title: Row(
                               children: [
                                 Expanded(
@@ -509,7 +707,7 @@ class HomeScreen extends ConsumerWidget {
             error: (e, s) => const SliverToBoxAdapter(child: SizedBox.shrink()),
           ),
 
-          const SliverToBoxAdapter(child: SizedBox(height: 110)),
+          const SliverToBoxAdapter(child: SizedBox(height: 90)),
         ],
       ),
     );

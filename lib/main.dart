@@ -13,6 +13,7 @@ import 'screens/auth/login_screen.dart';
 import 'screens/auth/register_screen.dart';
 import 'screens/home/main_navigation.dart';
 import 'screens/splash/splash_screen.dart';
+import 'providers/notification_service.dart'; // FIX: Pastikan service terimpor
 
 final authStateProvider = StreamProvider<User?>((ref) {
   return FirebaseAuth.instance.authStateChanges();
@@ -64,6 +65,9 @@ void main() async {
 
   await initializeDateFormatting('id_ID', null);
 
+  // TRIGGER SAKTI: Nyalakan mesin penentu waktu lokal sebelum UI dirender (Penyembuh v1)
+  await NotificationService().initNotification();
+
   runApp(
     const ProviderScope(
       child: TagihInApp(),
@@ -76,18 +80,13 @@ class TagihInApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Tetap pancing listener auth di level tertinggi sejak awal booting aplikasi
     ref.watch(authStatusProvider);
 
     return MaterialApp(
       title: 'Tagih.In',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
-
-      // FIX SAKTI: Selalu render Splash Screen duluan di gerbang utama tanpa interupsi kondisi auth reaktif
       home: const DartSplashScreen(),
-
-      // Peta navigasi penuh untuk mendukung perpindahan rute dari Splash Screen lo
       routes: {
         '/splash': (context) => const DartSplashScreen(),
         '/login': (context) => const LoginScreen(),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:firebase_auth/firebase_auth.dart'; // Impor core Firebase Auth untuk bypass logout
+import 'package:firebase_auth/firebase_auth.dart'; // Impor core Firebase Auth untuk bypass logout & reset sandi
 import '../../providers/auth_provider.dart';
 import '../../providers/insight_provider.dart';
 
@@ -20,12 +21,14 @@ class ProfileScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FB),
       body: CustomScrollView(
+        physics: const BouncingScrollPhysics(),
         slivers: [
           // APP BAR TITLE
           const SliverAppBar(
             floating: true,
             backgroundColor: Color(0xFFF8F9FB),
             elevation: 0,
+            scrolledUnderElevation: 0,
             automaticallyImplyLeading: false,
             title: Text(
               "Profil Saya",
@@ -184,13 +187,229 @@ class ProfileScreen extends ConsumerWidget {
               ),
               child: Column(
                 children: [
-                  _buildMenuTile(Icons.security_rounded, "Keamanan & Sandi"),
-                  const Divider(height: 1, indent: 56),
+                  // UPGRADE: KEAMANAN SHEET INTERAKTIF
                   _buildMenuTile(
-                      Icons.privacy_tip_rounded, "Kebijakan Privasi"),
+                    context,
+                    Icons.security_rounded,
+                    "Keamanan & Sandi",
+                    onTap: () {
+                      HapticFeedback.lightImpact();
+                      showModalBottomSheet(
+                        context: context,
+                        isScrollControlled: true,
+                        backgroundColor: Colors.transparent,
+                        builder: (context) => Container(
+                          padding: const EdgeInsets.all(24),
+                          decoration: const BoxDecoration(
+                            color: Colors.white,
+                            borderRadius:
+                                BorderRadius.vertical(top: Radius.circular(24)),
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Center(
+                                child: Container(
+                                    width: 36,
+                                    height: 4,
+                                    decoration: BoxDecoration(
+                                        color: Colors.grey.shade300,
+                                        borderRadius:
+                                            BorderRadius.circular(10))),
+                              ),
+                              const SizedBox(height: 24),
+                              const Text("Keamanan Akun",
+                                  style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: -0.4)),
+                              const SizedBox(height: 6),
+                              Text(
+                                  "Akun kamu dilindungi oleh Google Firebase Authentication System.",
+                                  style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey.shade500,
+                                      fontWeight: FontWeight.w500)),
+                              const SizedBox(height: 20),
+                              Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                    color: const Color(0xFFF8F9FB),
+                                    borderRadius: BorderRadius.circular(14),
+                                    border: Border.all(
+                                        color: const Color(0xFFE5E7EB))),
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.verified_user_rounded,
+                                        color: Colors.green.shade600, size: 20),
+                                    const SizedBox(width: 12),
+                                    const Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text("Metode Autentikasi",
+                                              style: TextStyle(
+                                                  fontSize: 11,
+                                                  color: Colors.grey,
+                                                  fontWeight: FontWeight.bold)),
+                                          SizedBox(height: 2),
+                                          Text("Secure Email & Password Sync",
+                                              style: TextStyle(
+                                                  fontSize: 13,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Colors.black87)),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 24),
+                              SizedBox(
+                                width: double.infinity,
+                                height: 50,
+                                child: ElevatedButton.icon(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.blue.shade700,
+                                    foregroundColor: Colors.white,
+                                    elevation: 0,
+                                    shape: RoundedRectangleBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(12)),
+                                  ),
+                                  icon: const Icon(Icons.mail_outline_rounded,
+                                      size: 18),
+                                  label: const Text("Kirim Email Reset Sandi",
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 13)),
+                                  onPressed: () async {
+                                    HapticFeedback.mediumImpact();
+                                    Navigator.pop(context);
+
+                                    try {
+                                      // Trigger email reset password asli dari jeroan instance auth
+                                      await FirebaseAuth.instance
+                                          .sendPasswordResetEmail(email: email);
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                                "Link pengaturan ulang sandi berhasil dikirim ke $email! ✉️"),
+                                            backgroundColor:
+                                                Colors.green.shade700,
+                                          ),
+                                        );
+                                      }
+                                    } catch (e) {
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                                "Gagal mengirim email: ${e.toString()}"),
+                                            backgroundColor: Colors.redAccent,
+                                          ),
+                                        );
+                                      }
+                                    }
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
                   const Divider(height: 1, indent: 56),
 
-                  // TOMBOL LOGOUT FIX (Aman dari Mismatch Nama Method)
+                  // UPGRADE: PRIVASI TERMS SHEET RINGKASAN
+                  _buildMenuTile(
+                    context,
+                    Icons.privacy_tip_rounded,
+                    "Kebijakan Privasi",
+                    onTap: () {
+                      HapticFeedback.lightImpact();
+                      showModalBottomSheet(
+                        context: context,
+                        isScrollControlled: true,
+                        backgroundColor: Colors.transparent,
+                        builder: (context) => Container(
+                          padding: const EdgeInsets.all(24),
+                          decoration: const BoxDecoration(
+                            color: Colors.white,
+                            borderRadius:
+                                BorderRadius.vertical(top: Radius.circular(24)),
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Center(
+                                child: Container(
+                                    width: 36,
+                                    height: 4,
+                                    decoration: BoxDecoration(
+                                        color: Colors.grey.shade300,
+                                        borderRadius:
+                                            BorderRadius.circular(10))),
+                              ),
+                              const SizedBox(height: 24),
+                              const Text("Kebijakan Privasi",
+                                  style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: -0.4)),
+                              const SizedBox(height: 4),
+                              Text(
+                                  "Bagaimana Tagih.In menjaga amunisi datamu tetap steril:",
+                                  style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey.shade500,
+                                      fontWeight: FontWeight.w500)),
+                              const SizedBox(height: 20),
+                              _buildPrivacyPoint(
+                                  Icons.cloud_done_rounded,
+                                  "Cloud Synchronization",
+                                  "Seluruh riwayat cash flow dan siklus tagihan dienkripsi secara aman saat disinkronkan ke server Google Cloud."),
+                              _buildPrivacyPoint(
+                                  Icons.phonelink_lock_rounded,
+                                  "Offline Encryption",
+                                  "Saat kondisi offline, data cash flow kamu dikunci rapat secara lokal di dalam memori penyimpanan internal device."),
+                              _buildPrivacyPoint(
+                                  Icons.front_hand_rounded,
+                                  "Zero Data Selling",
+                                  "Tagih.In berkomitmen penuh 100% untuk tidak membagikan, menyewakan, atau menjual data jajan harianmu ke pihak ketiga mana pun."),
+                              const SizedBox(height: 16),
+                              SizedBox(
+                                width: double.infinity,
+                                height: 48,
+                                child: TextButton(
+                                  style: TextButton.styleFrom(
+                                      shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(12))),
+                                  onPressed: () => Navigator.pop(context),
+                                  child: Text("Saya Mengerti",
+                                      style: TextStyle(
+                                          color: Colors.blue.shade700,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 13)),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  const Divider(height: 1, indent: 56),
+
+                  // TOMBOL LOGOUT FIX
                   ListTile(
                     leading: const Icon(Icons.logout_rounded,
                         color: Colors.redAccent),
@@ -200,7 +419,6 @@ class ProfileScreen extends ConsumerWidget {
                           color: Colors.redAccent, fontWeight: FontWeight.bold),
                     ),
                     onTap: () {
-                      // Menampilkan Dialog Konfirmasi sebelum melempar Sesi Login
                       showDialog(
                         context: context,
                         builder: (BuildContext dialogContext) {
@@ -225,11 +443,8 @@ class ProfileScreen extends ConsumerWidget {
                                       dialogContext); // Tutup dialog konfirmasi
 
                                   try {
-                                    // BYPASS SAKTI: Putus token login langsung dari core Firebase Instance
                                     await FirebaseAuth.instance.signOut();
-
                                     if (context.mounted) {
-                                      // Tendang balik ke rute login dan hapus tumpukan riwayat halaman sebelumnya
                                       Navigator.of(context)
                                           .pushNamedAndRemoveUntil(
                                               '/login', (route) => false);
@@ -269,13 +484,48 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildMenuTile(IconData icon, String title) {
+  // REFACTOR ENGINE: Menambahkan parameter VoidCallback onTap agar ubin menu merespon dinamis
+  Widget _buildMenuTile(BuildContext context, IconData icon, String title,
+      {required VoidCallback onTap}) {
     return ListTile(
       leading: Icon(icon, color: Colors.grey.shade600),
       title: Text(title,
           style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 15)),
       trailing: const Icon(Icons.chevron_right_rounded, color: Colors.grey),
-      onTap: () {},
+      onTap: onTap,
+    );
+  }
+
+  // Supporting Row Generator untuk butir kebijakan privasi
+  Widget _buildPrivacyPoint(IconData icon, String title, String description) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: Colors.blue.shade700, size: 18),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title,
+                    style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87)),
+                const SizedBox(height: 2),
+                Text(description,
+                    style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade600,
+                        height: 1.4,
+                        fontWeight: FontWeight.w500)),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
