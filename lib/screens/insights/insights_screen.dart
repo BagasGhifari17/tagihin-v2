@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../providers/bill_provider.dart';
+import '../../widgets/ads/ad_banner_wrapper.dart';
 
 // State lokal untuk melacak tab aktif ala iOS Segmented Control
 final currentTabProvider =
@@ -58,7 +59,6 @@ class InsightsScreen extends ConsumerWidget {
           ),
         ),
       ),
-      // Poin 10: Smooth Transition menggunakan AnimatedSwitcher agar tidak switch brutal
       body: AnimatedSwitcher(
         duration: const Duration(milliseconds: 250),
         transitionBuilder: (Widget child, Animation<double> animation) {
@@ -68,7 +68,6 @@ class InsightsScreen extends ConsumerWidget {
           data: (bills) {
             return transactionsAsync.when(
               data: (transactions) {
-                // FIX: Menaruh ValueKey secara legal di level Container pembungkus tab router
                 return Container(
                   key: ValueKey<int>(activeTab),
                   child: activeTab == 0
@@ -134,7 +133,7 @@ class InsightsScreen extends ConsumerWidget {
   }
 
   // ===========================================================================
-  // 1. PEMASUKAN TAB - HIGH CONTRAST PASTEL MINT & BLUE PALETTE
+  // 1. PEMASUKAN TAB - FIXED SCROLL
   // ===========================================================================
   Widget _buildPemasukanTab(List<dynamic> transactions) {
     final incomes = transactions.where((tx) => tx.type == 'income').toList();
@@ -153,73 +152,79 @@ class InsightsScreen extends ConsumerWidget {
     final sortedCategories = categoryMap.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
 
-    // FIX WARNA: Palet kontras tinggi bersilangan rona agar gampang dibedakan mata manusia
     final List<Color> mintPalette = [
-      const Color(0xFF059669), // 1. Emerald Green Core (Gaji)
-      const Color(0xFF2563EB), // 2. Royal Blue (Kontras Pemecah)
-      const Color(0xFF06B6D4), // 3. Mint Cyan (Sampingan)
-      const Color(0xFF84CC16), // 4. Lime Soft (Bonus)
-      const Color(0xFF0F766E), // 5. Deep Teal Skenario Banyak Data
+      const Color(0xFF059669),
+      const Color(0xFF2563EB),
+      const Color(0xFF06B6D4),
+      const Color(0xFF84CC16),
+      const Color(0xFF0F766E),
     ];
 
-    return ListView(
-      physics: const BouncingScrollPhysics(),
+    // FIX SCROLL LOCK: Mengganti ListView dengan SingleChildScrollView + Column pembungkus
+    return SingleChildScrollView(
+      physics:
+          const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
       padding: const EdgeInsets.all(20),
-      children: [
-        _buildDonutChartCard(
-          totalAmount: totalIncome,
-          labelPeriod: "Total Pemasukan Bulan Ini",
-          dataMap: categoryMap,
-          palette: mintPalette,
-        ),
-        const SizedBox(height: 16),
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.teal.shade50.withValues(alpha: 0.3),
-            borderRadius: BorderRadius.circular(16),
-            border:
-                Border.all(color: Colors.teal.shade100.withValues(alpha: 0.4)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildDonutChartCard(
+            totalAmount: totalIncome,
+            labelPeriod: "Total Pemasukan Bulan Ini",
+            dataMap: categoryMap,
+            palette: mintPalette,
           ),
-          child: Row(
-            children: [
-              Icon(Icons.trending_up_rounded,
-                  color: Colors.teal.shade700, size: 20),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "Pemasukan terpantau stabil rill, Gas!",
-                      style: TextStyle(
-                          fontSize: 13,
-                          color: Colors.teal.shade900,
-                          fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      "Mengalami kenaikan performa arus kas sebesar +12% dibanding bulan lalu.",
-                      style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.teal.shade800,
-                          fontWeight: FontWeight.w500,
-                          height: 1.4),
-                    ),
-                  ],
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.teal.shade50.withValues(alpha: 0.3),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                  color: Colors.teal.shade100.withValues(alpha: 0.4)),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.trending_up_rounded,
+                    color: Colors.teal.shade700, size: 20),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "Pemasukan terpantau stabil rill, Gas!",
+                        style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.teal.shade900,
+                            fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        "Mengalami kenaikan performa arus kas sebesar +12% dibanding bulan lalu.",
+                        style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.teal.shade800,
+                            fontWeight: FontWeight.w500,
+                            height: 1.4),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-        const SizedBox(height: 16),
-        _buildCategoryListSection(sortedCategories, totalIncome, mintPalette),
-      ],
+          const SizedBox(height: 16),
+          _buildCategoryListSection(sortedCategories, totalIncome, mintPalette),
+          const SizedBox(height: 12),
+          const AdBannerWrapper(),
+        ],
+      ),
     );
   }
 
   // ===========================================================================
-  // 2. PENGELUARAN TAB - HIGH CONTRAST PASTEL CRIMSON & PURPLE PALETTE
+  // 2. PENGELUARAN TAB - FIXED SCROLL (ANTIDOTE NESTED CONFLICT)
   // ===========================================================================
   Widget _buildPengeluaranTab(List<dynamic> transactions) {
     final expenses = transactions.where((tx) => tx.type == 'expense').toList();
@@ -238,64 +243,71 @@ class InsightsScreen extends ConsumerWidget {
     final sortedCategories = categoryMap.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
 
-    // FIX WARNA: 6 Warna basis rona terpisah tegas untuk mengantisipasi jajan padat (>4 kategori)
     final List<Color> expensePalette = [
-      const Color(0xFFDC2626), // 1. Crimson Red (Beban Berat / Kost)
-      const Color(0xFFF59E0B), // 2. Amber Orange (Transportasi)
-      const Color(0xFF7C3AED), // 3. Deep Purple (Hiburan)
-      const Color(0xFFF43F5E), // 4. Hot Pink Soft (Makanan)
-      const Color(0xFF0284C7), // 5. Sky Blue Premium (Tagihan Bulanan)
-      const Color(0xFF4B5563), // 6. Charcoal Grey (Belanja/Umum)
+      const Color(0xFFDC2626),
+      const Color(0xFFF59E0B),
+      const Color(0xFF7C3AED),
+      const Color(0xFFF43F5E),
+      const Color(0xFF0284C7),
+      const Color(0xFF4B5563),
     ];
 
-    return ListView(
-      physics: const BouncingScrollPhysics(),
+    // FIX SCROLL LOCK: Mengganti ListView dengan SingleChildScrollView + Column bodi bunderan & list item
+    return SingleChildScrollView(
+      physics:
+          const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
       padding: const EdgeInsets.all(20),
-      children: [
-        if (categoryMap.keys.length > 1)
-          _buildDonutChartCard(
-            totalAmount: totalExpense,
-            labelPeriod: "Total Pengeluaran",
-            dataMap: categoryMap,
-            palette: expensePalette,
-          )
-        else
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.01), blurRadius: 10)
-              ],
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (categoryMap.keys.length > 1)
+            _buildDonutChartCard(
+              totalAmount: totalExpense,
+              labelPeriod: "Total Pengeluaran",
+              dataMap: categoryMap,
+              palette: expensePalette,
+            )
+          else
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.01),
+                      blurRadius: 10)
+                ],
+              ),
+              child: Column(
+                children: [
+                  Text("Total Pengeluaran Periode Ini",
+                      style: TextStyle(
+                          color: Colors.grey.shade500,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 8),
+                  Text(
+                      "Rp ${NumberFormat('#,###', 'id_ID').format(totalExpense)}",
+                      style: const TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -0.5)),
+                ],
+              ),
             ),
-            child: Column(
-              children: [
-                Text("Total Pengeluaran Periode Ini",
-                    style: TextStyle(
-                        color: Colors.grey.shade500,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600)),
-                const SizedBox(height: 8),
-                Text(
-                    "Rp ${NumberFormat('#,###', 'id_ID').format(totalExpense)}",
-                    style: const TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: -0.5)),
-              ],
-            ),
-          ),
-        const SizedBox(height: 16),
-        _buildCategoryListSection(
-            sortedCategories, totalExpense, expensePalette),
-      ],
+          const SizedBox(height: 16),
+          _buildCategoryListSection(
+              sortedCategories, totalExpense, expensePalette),
+          const SizedBox(height: 12),
+          const AdBannerWrapper(),
+        ],
+      ),
     );
   }
 
   // ===========================================================================
-  // 3. TAGIHAN TAB - DEEP INJECTION MINIMALIST UPCOMING BILLS
+  // 3. TAGIHAN TAB - FIXED SCROLL
   // ===========================================================================
   Widget _buildTagihanTab(
       List<dynamic> bills, double netBalance, double safeToSpend) {
@@ -313,7 +325,8 @@ class InsightsScreen extends ConsumerWidget {
       ..sort((a, b) => a.dueDate.compareTo(b.dueDate));
 
     return ListView(
-      physics: const BouncingScrollPhysics(),
+      physics:
+          const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
       padding: const EdgeInsets.all(20),
       children: [
         Container(
@@ -514,6 +527,8 @@ class InsightsScreen extends ConsumerWidget {
             ],
           ),
         ),
+        const SizedBox(height: 16),
+        const AdBannerWrapper(),
       ],
     );
   }
@@ -612,8 +627,6 @@ class InsightsScreen extends ConsumerWidget {
             itemBuilder: (context, index) {
               final entry = categories[index];
               final percent = total > 0 ? (entry.value / total) : 0.0;
-
-              // FIX: Modulo warna reaktif untuk bar list rincian kategori agar sinkron dengan donut ring
               final color = palette[index % palette.length];
 
               return Column(
@@ -633,7 +646,7 @@ class InsightsScreen extends ConsumerWidget {
                           Text(entry.key,
                               style: const TextStyle(
                                   fontSize: 13,
-                                  fontWeight: FontWeight.w700,
+                                  fontWeight: FontWeight.bold,
                                   color: Colors.black87)),
                           Text(" — ${(percent * 100).toStringAsFixed(0)}%",
                               style: TextStyle(
@@ -751,10 +764,7 @@ class DonutChartPainter extends CustomPainter {
 
     dataMap.forEach((key, value) {
       final sweepAngle = (value / total) * 2 * pi;
-
-      // FIX UTAMA: Pengaman modulo agar looping warna sisa bagi tidak memicu IndexOutOfBoundsException
       paint.color = palette[index % palette.length];
-
       canvas.drawArc(rect, startAngle, sweepAngle, false, paint);
       startAngle += sweepAngle;
       index++;

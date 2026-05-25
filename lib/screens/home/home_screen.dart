@@ -5,7 +5,8 @@ import '../../providers/bill_provider.dart';
 import 'package:intl/intl.dart';
 import '../../models/bill_model.dart';
 import '../../widgets/sheets/bill_sheet.dart';
-import '../../providers/notification_service.dart'; // FIX: Impor provider pengingat lo
+import '../../providers/notification_service.dart';
+import '../../widgets/ads/ad_banner_wrapper.dart'; // <--- MODIFIKASI: Impor pembungkus iklan premium lo
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -400,7 +401,6 @@ class HomeScreen extends ConsumerWidget {
                                                 .toggleBillStatus(
                                                     bill.id, bill.isPaid);
 
-                                            // FIX: Batalkan pemicu alarm di memori HP secara real-time pas tagihan diset lunas
                                             ref
                                                 .read(
                                                     notificationServiceProvider)
@@ -498,7 +498,6 @@ class HomeScreen extends ConsumerWidget {
                                 .read(firestoreServiceProvider)
                                 .deleteBill(bill.id);
 
-                            // FIX: Batalkan booking alarm jika dokumen tagihan dihapus permanent
                             ref
                                 .read(notificationServiceProvider)
                                 .cancelNotification(bill.id);
@@ -705,6 +704,11 @@ class HomeScreen extends ConsumerWidget {
             },
             loading: () => const SliverToBoxAdapter(child: SizedBox.shrink()),
             error: (e, s) => const SliverToBoxAdapter(child: SizedBox.shrink()),
+          ),
+
+          // MODIFIKASI SAKTI: Menyuntikkan Banner Area Iklan non-intrusif di paling bawah viewport scroll
+          const SliverToBoxAdapter(
+            child: AdBannerWrapper(), // <--- TANCAP DI SINI SECARA BERKELAS
           ),
 
           const SliverToBoxAdapter(child: SizedBox(height: 90)),

@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart'; // Impor core Firebase Auth untuk bypass logout & reset sandi
 import '../../providers/auth_provider.dart';
 import '../../providers/insight_provider.dart';
+// Menggunakan import relatif agar kebal dari eror package pathing uri_does_not_exist
+import '../../widgets/cards/premium_profile_card.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -21,7 +23,11 @@ class ProfileScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FB),
       body: CustomScrollView(
-        physics: const BouncingScrollPhysics(),
+        // FIX SCROLL MANTUL: Menggunakan ClampingScrollPhysics dikombinasikan dengan AlwaysScrollable
+        // Ini taktik mutlak biar Android/iOS gak mantul brutal ke atas pas kontennya ditarik ke bawah.
+        physics: const AlwaysScrollableScrollPhysics(
+          parent: ClampingScrollPhysics(),
+        ),
         slivers: [
           // APP BAR TITLE
           const SliverAppBar(
@@ -162,6 +168,19 @@ class ProfileScreen extends ConsumerWidget {
             ),
           ),
 
+          // FITUR EKSKLUSIF BANNER SECTION
+          const SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+              child: Text("Fitur Eksklusif",
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            ),
+          ),
+
+          const SliverToBoxAdapter(
+            child: PremiumProfileCard(),
+          ),
+
           // 3. MENU PENGATURAN & LOGOUT ELEGAN
           const SliverToBoxAdapter(
             child: Padding(
@@ -173,7 +192,8 @@ class ProfileScreen extends ConsumerWidget {
 
           SliverToBoxAdapter(
             child: Container(
-              margin: const EdgeInsets.all(16),
+              margin:
+                  const EdgeInsets.only(left: 16, right: 16, bottom: 8, top: 8),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(24),
@@ -187,7 +207,7 @@ class ProfileScreen extends ConsumerWidget {
               ),
               child: Column(
                 children: [
-                  // UPGRADE: KEAMANAN SHEET INTERAKTIF
+                  // KEAMANAN SHEET INTERAKTIF
                   _buildMenuTile(
                     context,
                     Icons.security_rounded,
@@ -290,7 +310,6 @@ class ProfileScreen extends ConsumerWidget {
                                     Navigator.pop(context);
 
                                     try {
-                                      // Trigger email reset password asli dari jeroan instance auth
                                       await FirebaseAuth.instance
                                           .sendPasswordResetEmail(email: email);
                                       if (context.mounted) {
@@ -327,7 +346,7 @@ class ProfileScreen extends ConsumerWidget {
                   ),
                   const Divider(height: 1, indent: 56),
 
-                  // UPGRADE: PRIVASI TERMS SHEET RINGKASAN
+                  // PRIVASI TERMS SHEET RINGKASAN
                   _buildMenuTile(
                     context,
                     Icons.privacy_tip_rounded,
@@ -409,7 +428,7 @@ class ProfileScreen extends ConsumerWidget {
                   ),
                   const Divider(height: 1, indent: 56),
 
-                  // TOMBOL LOGOUT FIX
+                  // TOMBOL LOGOUT
                   ListTile(
                     leading: const Icon(Icons.logout_rounded,
                         color: Colors.redAccent),
@@ -439,8 +458,7 @@ class ProfileScreen extends ConsumerWidget {
                               ),
                               TextButton(
                                 onPressed: () async {
-                                  Navigator.pop(
-                                      dialogContext); // Tutup dialog konfirmasi
+                                  Navigator.pop(dialogContext);
 
                                   try {
                                     await FirebaseAuth.instance.signOut();
@@ -479,12 +497,17 @@ class ProfileScreen extends ConsumerWidget {
               ),
             ),
           ),
+
+          // FIX UTAMA: Memberikan tambahan ruang kosong setinggi 110 pixel di bawah list pengaturan
+          // Ini trik sakti biar container menu terbawah tidak nyangkut / membal naik ke atas saat di-scroll
+          const SliverToBoxAdapter(
+            child: SizedBox(height: 110),
+          ),
         ],
       ),
     );
   }
 
-  // REFACTOR ENGINE: Menambahkan parameter VoidCallback onTap agar ubin menu merespon dinamis
   Widget _buildMenuTile(BuildContext context, IconData icon, String title,
       {required VoidCallback onTap}) {
     return ListTile(
@@ -496,7 +519,6 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
-  // Supporting Row Generator untuk butir kebijakan privasi
   Widget _buildPrivacyPoint(IconData icon, String title, String description) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0),

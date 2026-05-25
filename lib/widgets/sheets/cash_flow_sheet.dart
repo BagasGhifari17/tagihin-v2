@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 import '../../providers/transaction_provider.dart';
+// Mengimpor utilitas formatter core asli bawaan proyek lo
+import '../../core/utils/currency_formatter.dart';
 
 class CashFlowSheet extends ConsumerStatefulWidget {
   const CashFlowSheet({super.key});
@@ -27,21 +29,6 @@ class _CashFlowSheetState extends ConsumerState<CashFlowSheet> {
     'E-Wallet',
     'Umum'
   ];
-
-  void _formatCurrency(String value) {
-    if (value.isEmpty) return;
-    final text = value.replaceAll('.', '');
-    final amount = int.tryParse(text);
-    if (amount == null) return;
-
-    final formatted =
-        NumberFormat('#,###', 'id_ID').format(amount).replaceAll(',', '.');
-
-    _amountController.value = TextEditingValue(
-      text: formatted,
-      selection: TextSelection.collapsed(offset: formatted.length),
-    );
-  }
 
   @override
   void dispose() {
@@ -85,7 +72,6 @@ class _CashFlowSheetState extends ConsumerState<CashFlowSheet> {
                 ],
               ),
               const SizedBox(height: 16),
-
               Row(
                 children: [
                   Expanded(
@@ -117,42 +103,90 @@ class _CashFlowSheetState extends ConsumerState<CashFlowSheet> {
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
-
+              const SizedBox(height: 24),
+              const Text(
+                "NOMINAL TRANSAKSI",
+                style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey,
+                    letterSpacing: 0.5),
+              ),
               TextFormField(
                 controller: _amountController,
                 keyboardType: TextInputType.number,
-                onChanged: _formatCurrency,
-                decoration: const InputDecoration(
-                  labelText: "Nominal",
+                style:
+                    const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+                decoration: InputDecoration(
+                  hintText: "0",
                   prefixText: "Rp ",
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.all(Radius.circular(16))),
+                  border: InputBorder.none,
+                  hintStyle: TextStyle(color: Colors.grey.shade300),
                 ),
-                validator: (val) => val!.isEmpty ? "Masukkan nominal" : null,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  CurrencyInputFormatter(), // <--- Memanggil core utility bawaan proyek lo
+                ],
+                // SUNTIKAN KUNCI KESUKSESAN MUTLAK: Meniru gaya bill_sheet.dart untuk memaksa offset me-refresh
+                onChanged: (val) {
+                  setState(() {});
+                },
+                validator: (val) {
+                  if (val == null || val.isEmpty) return "Masukkan nominal";
+                  String cleanText = val.replaceAll('.', '');
+                  if ((double.tryParse(cleanText) ?? 0) == 0) {
+                    return "Masukkan nominal";
+                  }
+                  return null;
+                },
               ),
-              const SizedBox(height: 16),
-
+              Divider(color: Colors.grey.shade200, height: 1),
+              const SizedBox(height: 20),
               TextFormField(
                 controller: _titleController,
                 textCapitalization: TextCapitalization.sentences,
-                decoration: const InputDecoration(
-                  labelText: "Keterangan (cth: Jajan Kopi, Gaji Bulanan)",
+                decoration: InputDecoration(
+                  labelText: "Keterangan transaksi",
+                  hintText: "Misal: Jajan Kopi, Gaji Bulanan",
+                  labelStyle:
+                      TextStyle(color: Colors.grey.shade500, fontSize: 14),
+                  floatingLabelStyle: const TextStyle(color: Colors.blue),
                   border: OutlineInputBorder(
-                      borderRadius: BorderRadius.all(Radius.circular(16))),
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide(color: Colors.grey.shade200)),
+                  enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide(color: Colors.grey.shade200)),
+                  focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide:
+                          const BorderSide(color: Colors.blue, width: 1.5)),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 ),
                 validator: (val) =>
-                    val!.isEmpty ? "Keterangan tidak boleh kosong" : null,
+                    val!.isEmpty ? "Keterangan tidak boleh kosong, Gas!" : null,
               ),
               const SizedBox(height: 16),
-
-              // PERBAIKAN: Menggunakan properti modern DropdownButtonFormField agar warning lenyap
               DropdownButtonFormField<String>(
                 initialValue: _selectedCategory,
-                decoration: const InputDecoration(
-                  labelText: "Kategori",
+                decoration: InputDecoration(
+                  labelText: "Pilih Kategori",
+                  labelStyle:
+                      TextStyle(color: Colors.grey.shade500, fontSize: 14),
+                  floatingLabelStyle: const TextStyle(color: Colors.blue),
                   border: OutlineInputBorder(
-                      borderRadius: BorderRadius.all(Radius.circular(16))),
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide(color: Colors.grey.shade200)),
+                  enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide(color: Colors.grey.shade200)),
+                  focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide:
+                          const BorderSide(color: Colors.blue, width: 1.5)),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 ),
                 items: _categories
                     .map((cat) =>
@@ -165,21 +199,22 @@ class _CashFlowSheetState extends ConsumerState<CashFlowSheet> {
                 },
               ),
               const SizedBox(height: 24),
-
               SizedBox(
                 width: double.infinity,
                 height: 54,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue.shade700,
+                    backgroundColor: Colors.black87,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16)),
+                    elevation: 0,
                   ),
                   onPressed: formState.isLoading
                       ? null
                       : () async {
                           if (_formKey.currentState!.validate()) {
+                            // Bersihkan karakter titik sebelum di-parse ke double untuk disinkronkan ke database Firestore
                             final cleanAmount = double.parse(
                                 _amountController.text.replaceAll('.', ''));
 
@@ -187,13 +222,12 @@ class _CashFlowSheetState extends ConsumerState<CashFlowSheet> {
                             final scaffoldMessenger =
                                 ScaffoldMessenger.of(context);
 
-                            // AGRESIP & RESPONSIP: Langsung tutup sheet tanpa menunggu async gap gantung
                             navigator.pop();
 
                             final success = await ref
                                 .read(transactionFormNotifierProvider.notifier)
                                 .submitTransaction(
-                                  title: _titleController.text,
+                                  title: _titleController.text.trim(),
                                   amount: cleanAmount,
                                   type: _selectedType,
                                   category: _selectedCategory,
@@ -225,7 +259,7 @@ class _CashFlowSheetState extends ConsumerState<CashFlowSheet> {
                         )
                       : const Text("Simpan Transaksi",
                           style: TextStyle(
-                              fontWeight: FontWeight.bold, fontSize: 16)),
+                              fontWeight: FontWeight.bold, fontSize: 15)),
                 ),
               ),
             ],
